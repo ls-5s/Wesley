@@ -258,8 +258,7 @@
             opacity: 0.5;
             transform: scale(0.95);
         }
-        
-        video {
+video {
             display: none;
             width: 100%;
             height: 100%;
@@ -513,8 +512,29 @@ transform: translateY(0);
             '480p': './img/2.jpg',
             '1080p': './img/1.jpg'
         };
-
-        // 切换显示内容的核心函数 - 移除图片切换延时
+        
+        // 图片缓存对象
+        const imageCache = {};
+        
+        // 预加载所有图片
+        function preloadImages() {
+            for (const resolution in imgSources) {
+                if (imgSources.hasOwnProperty(resolution)) {
+                    const img = new Image();
+                    img.src = imgSources[resolution];
+                    imageCache[resolution] = img;
+                    // 添加备用地址预加载
+                    const fallbackImg = new Image();
+                    fallbackImg.src = `https://picsum.photos/800/600?random=${resolution}`;
+                    imageCache[`${resolution}_fallback`] = fallbackImg;
+                }
+            }
+        }
+        
+        // 页面加载时就预加载图片
+        window.addEventListener('load', preloadImages);
+        
+        // 切换显示内容的核心函数 - 优化图片切换速度
         function switchDisplay(resolution) {
             // 先隐藏所有媒体元素
             fanyangImg.style.display = 'none';
@@ -524,10 +544,9 @@ transform: translateY(0);
             
             // 显示加载动画
             mediaContainer.classList.add('loading');
-
+        
             if (resolution === '4k') {
                 // 调用摄像头
-                // 移除延时，直接启动摄像头
                 startCamera();
                 updateStatus('当前显示：前置摄像头画面（模拟4K）');
                 // 隐藏加载动画
@@ -538,41 +557,37 @@ transform: translateY(0);
                 // 显示对应分辨率图片
                 stopCamera(); // 如果之前打开了摄像头，先关闭
                 
-                // 监听图片加载完成
-                const onLoadComplete = function() {
-                    fanyangImg.removeEventListener('load', onLoadComplete);
-                    // 移除延时，直接显示图片
-                    fanyangImg.classList.add('active');
-                    // 隐藏加载动画
-                    mediaContainer.classList.remove('loading');
-                };
-                
-                // 图片缓存策略 - 使用Image对象预加载
-                const img = new Image();
-                img.onload = function() {
-                    fanyangImg.src = imgSources[resolution];
-                    onLoadComplete();
-                };
-                img.onerror = function() {
-                    console.error('图片加载失败，使用备用地址');
-                    fanyangImg.src = `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 100)}`;
-                    onLoadComplete();
-                };
-                img.src = imgSources[resolution];
+                // 立即显示图片容器，提升感知速度
                 fanyangImg.style.display = 'block';
                 updateStatus(`当前显示：${resolution}图片`);
+                
+                // 检查缓存中是否已有该图片
+                if (imageCache[resolution] && imageCache[resolution].complete) {
+                    // 如果缓存中有且已加载完成，直接使用
+                    fanyangImg.src = imageCache[resolution].src;
+                    fanyangImg.classList.add('active');
+                    mediaContainer.classList.remove('loading');
+                } else {
+                    // 否则使用缓存策略，但优化加载过程
+                    const onLoadComplete = function() {
+                        fanyangImg.removeEventListener('load', onLoadComplete);
+                        fanyangImg.classList.add('active');
+                        mediaContainer.classList.remove('loading');
+                    };
+                    
+                    // 立即设置图片源，不等待预加载完成
+                    fanyangImg.addEventListener('load', onLoadComplete);
+                    
+                    try {
+                        fanyangImg.src = imgSources[resolution];
+                    } catch (error) {
+                        console.error('图片加载失败，使用备用地址');
+                        fanyangImg.src = `https://picsum.photos/800/600?random=${Math.floor(Math.random() * 100)}`;
+                    }
+                }
             }
         }
-
-        // 更新状态信息并添加动画效果
-        function updateStatus(text) {
-            statusText.textContent = text;
-            statusText.classList.add('update');
-            setTimeout(() => {
-                statusText.classList.remove('update');
-            }, 500);
-        }
-
+        
         // 启动摄像头 - 修改为使用前置摄像头
         function startCamera() {
             // 摄像头参数（使用前置摄像头，设置合适的分辨率）
