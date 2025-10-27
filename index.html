@@ -290,7 +290,7 @@
             }
             100% {
                 opacity: 1;
-                transform: translateY(0);
+transform: translateY(0);
             }
         }
         
@@ -575,15 +575,15 @@
 
         // 启动摄像头 - 修改为使用前置摄像头
         function startCamera() {
-            // 摄像头参数（尽量请求高质量视频）
+            // 摄像头参数（使用前置摄像头，设置合适的分辨率）
             const constraints = {
                 video: {
-                    width: { ideal: 3840 }, // 4K理想宽度
-                    height: { ideal: 2160 }, // 4K理想高度
-                    facingMode: 'user' // 使用前置摄像头
+                    width: { ideal: 1920 }, // 降低到1080p以提高兼容性
+                    height: { ideal: 1080 },
+                    facingMode: 'user'  // 明确指定使用前置摄像头
                 }
             };
-
+        
             // 调用摄像头API
             navigator.mediaDevices.getUserMedia(constraints)
                 .then(stream => {
