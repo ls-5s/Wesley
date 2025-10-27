@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>沸羊羊显示切换</title>
     <style>
         /* 全局样式重置和基础设置 */
@@ -24,6 +24,9 @@
             justify-content: center;
             overflow: hidden;
             position: relative;
+            /* 移动端触摸优化 */
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         
         /* 背景粒子动画 */
@@ -67,6 +70,8 @@
             opacity: 0;
             transform: translateY(30px) scale(0.95);
             animation: containerEnter 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            /* 移动端边框增强 */
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
         
         @keyframes containerEnter {
@@ -147,6 +152,9 @@
             position: relative;
             font-weight: 500;
             color: #4a5568;
+            /* 移动端触摸优化 */
+            -webkit-appearance: none;
+            -moz-appearance: none;
         }
         
         .select-wrapper::after {
@@ -360,7 +368,7 @@
             100% { transform: translate(-50%, -50%) rotate(-360deg); }
         }
         
-        /* 响应式设计 */
+        /* 响应式设计增强 - 增加更多断点 */
         @media (max-width: 768px) {
             body {
                 padding: 15px;
@@ -390,17 +398,83 @@
         }
         
         @media (max-width: 480px) {
+            body {
+                padding: 10px;
+                min-height: 100vh;
+                display: flex;
+                align-items: flex-start;
+                overflow-y: auto;
+            }
+            
             .container {
                 padding: 15px;
+                width: 100%;
+                max-width: 100%;
+                margin-top: 20px;
+                margin-bottom: 20px;
             }
             
             h1 {
                 font-size: 20px;
+                margin-bottom: 15px;
             }
             
             select {
                 padding: 10px 14px;
                 font-size: 14px;
+                margin-bottom: 15px;
+            }
+            
+            .info {
+                font-size: 13px;
+                margin-top: 12px;
+                padding: 8px 12px;
+            }
+            
+            /* 移动端媒体容器优化 */
+            .media-container {
+                aspect-ratio: 16/9;
+            }
+        }
+        
+        /* 小屏设备优化 */
+        @media (max-width: 360px) {
+            body {
+                padding: 8px;
+            }
+            
+            .container {
+                padding: 12px;
+            }
+            
+            h1 {
+                font-size: 18px;
+            }
+            
+            select {
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+            
+            .info {
+                font-size: 12px;
+            }
+        }
+        
+        /* 横屏模式优化 */
+        @media (orientation: landscape) and (max-height: 500px) {
+            body {
+                min-height: 100vh;
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 15px;
+                max-width: 90vw;
+            }
+            
+            .media-container {
+                max-height: 60vh;
             }
         }
     </style>
@@ -440,7 +514,7 @@
             '1080p': './img/1.jpg'
         };
 
-        // 切换显示内容的核心函数
+        // 切换显示内容的核心函数 - 移除图片切换延时
         function switchDisplay(resolution) {
             // 先隐藏所有媒体元素
             fanyangImg.style.display = 'none';
@@ -453,14 +527,13 @@
 
             if (resolution === '4k') {
                 // 调用摄像头
+                // 移除延时，直接启动摄像头
+                startCamera();
+                updateStatus('当前显示：前置摄像头画面（模拟4K）');
+                // 隐藏加载动画
                 setTimeout(() => {
-                    startCamera();
-                    updateStatus('当前显示：摄像头画面（模拟4K）');
-                    // 隐藏加载动画
-                    setTimeout(() => {
-                        mediaContainer.classList.remove('loading');
-                    }, 300);
-                }, 300); // 轻微延迟以显示加载效果
+                    mediaContainer.classList.remove('loading');
+                }, 300);
             } else {
                 // 显示对应分辨率图片
                 stopCamera(); // 如果之前打开了摄像头，先关闭
@@ -468,14 +541,10 @@
                 // 监听图片加载完成
                 const onLoadComplete = function() {
                     fanyangImg.removeEventListener('load', onLoadComplete);
-                    // 添加淡入效果
-                    setTimeout(() => {
-                        fanyangImg.classList.add('active');
-                        // 隐藏加载动画
-                        setTimeout(() => {
-                            mediaContainer.classList.remove('loading');
-                        }, 300);
-                    }, 50);
+                    // 移除延时，直接显示图片
+                    fanyangImg.classList.add('active');
+                    // 隐藏加载动画
+                    mediaContainer.classList.remove('loading');
                 };
                 
                 // 图片缓存策略 - 使用Image对象预加载
@@ -504,14 +573,14 @@
             }, 500);
         }
 
-        // 启动摄像头
+        // 启动摄像头 - 修改为使用前置摄像头
         function startCamera() {
             // 摄像头参数（尽量请求高质量视频）
             const constraints = {
                 video: {
                     width: { ideal: 3840 }, // 4K理想宽度
                     height: { ideal: 2160 }, // 4K理想高度
-                    facingMode: 'environment' // 优先使用后置摄像头（如果有）
+                    facingMode: 'user' // 使用前置摄像头
                 }
             };
 
@@ -521,10 +590,8 @@
                     mediaStream = stream;
                     cameraVideo.srcObject = stream;
                     cameraVideo.style.display = 'block';
-                    // 添加淡入效果
-                    setTimeout(() => {
-                        cameraVideo.classList.add('active');
-                    }, 50);
+                    // 移除延时，直接显示视频
+                    cameraVideo.classList.add('active');
                 })
                 .catch(error => {
                     console.error('摄像头调用失败：', error);
@@ -555,14 +622,16 @@
             }
         }
 
-        // 监听分辨率选择变化
+        // 监听分辨率选择变化 - 移除延时
         resolutionSelect.addEventListener('change', function () {
             // 添加选择框变化动画
             this.style.transform = 'scale(0.98)';
+            // 移除延时，立即响应
+            switchDisplay(this.value);
+            // 快速恢复选择框状态
             setTimeout(() => {
                 this.style.transform = 'scale(1)';
-                switchDisplay(this.value);
-            }, 150);
+            }, 50);
         });
 
         // 添加鼠标悬停效果
@@ -571,6 +640,17 @@
         });
         
         mediaContainer.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+
+        // 移动端触摸优化
+        mediaContainer.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(1.01)';
+        });
+        
+        mediaContainer.addEventListener('touchend', function(e) {
+            e.preventDefault();
             this.style.transform = 'scale(1)';
         });
 
